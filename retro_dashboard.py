@@ -31,22 +31,23 @@ st.title("🟢 DASHBOARD RETRÔ DE PROCESSOS (Tempo Real)")
 
 placeholder = st.empty()
 
-# Loop de atualização
-while True:
-    with placeholder.container():
-        processos = listaProcessos()
-        tabela = [{
-            "PID": p.pid,
-            "Nome": p.name,
-            "Estado": p.estado,
-            "PPID": p.ppid,
-            "UID": p.uid,
-            "Threads": p.threads,
-            "CPU (user ticks)": p.cpuUserTick,
-            "CPU (kernel ticks)": p.cpuSysTick,
-            "RAM (KB)": p.memoriaKB
-        } for p in processos]
+from streamlit_autorefresh import st_autorefresh
 
-        st.dataframe(tabela, use_container_width=True)
+# Adicione isso no topo da sua interface, define a cada quanto tempo recarrega (2000ms = 2s)
+st_autorefresh(interval=2000, key="recarregar")
 
-    time.sleep(2)
+# código de interface normal aqui (sem while True)
+processos = listaProcessos()
+tabela = [{
+    "PID": p.pid,
+    "Nome": p.name,
+    "Estado": p.estado,
+    "PPID": p.ppid,
+    "UID": p.uid,
+    "Threads": p.threads,
+    "CPU (user ticks)": p.cpuUserTick,
+    "CPU (kernel ticks)": p.cpuSysTick,
+    "RAM (KB)": p.memoriaKB
+} for p in processos]
+
+st.dataframe(tabela, use_container_width=True)

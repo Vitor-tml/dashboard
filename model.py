@@ -28,7 +28,8 @@ class Processo:
         with open(path_cpu, 'r') as f:
             valores = f.read().split()
             self.cpuUserTick = int(valores[13])  # tempo em ticks no modo usuário
-            self.cpuSysTick = int(valores[14])  # tempo em ticks no modo sistema
+            self.cpuSysTick = int(valores[1
+            4])  # tempo em ticks no modo sistema
 
     def statusProcesso(self):
         status_path = '/proc/' + str(self.pid) + '/status'
@@ -45,9 +46,9 @@ class Processo:
                         self.estado = linha.split()[1]
                     elif linha.startswith("Threads:"):
                         self.threads = int(linha.split()[1])
-                    # Se já tiver todos os campos, pode parar cedo (opcional)
                     elif linha.startswith("VmRSS:"):
                         self.memoriaKB = int(linha.split()[1])  # valor em kB
+                    # Se já tiver todos os campos, pode parar cedo (opcional)
                     if all([self.name, self.ppid, self.estado, self.uid, self.threads]):
                         break
         except FileNotFoundError:
