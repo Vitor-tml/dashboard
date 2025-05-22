@@ -10,7 +10,7 @@ install: venv
 
 # Roda o projeto dentro do venv
 run: venv
-	. venv/bin/activate && streamlit run view.py
+	. venv/bin/activate && streamlit run main.py
 
 cli:
 	venv/bin/python dashboard_realtime.py
