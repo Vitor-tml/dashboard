@@ -1,6 +1,10 @@
 from model import listaProcessos
-from view import mostrarProcessos
+from view import iniciaDash
 
 def executarDashboard():
     processos = listaProcessos()
-    mostrarProcessos(processos)
+#    iniciaDash(processos)
+
+    # Teste de gráfico
+    from view import testes
+    testes()

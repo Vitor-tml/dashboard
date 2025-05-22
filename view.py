@@ -1,107 +1,77 @@
-# streamlit run streamlite_dashboard.py
+from model import Processo
+from rich.table import Table
+from rich.console import Console
+from rich.panel import Panel
+import plotext as plt
+from rich.align import Align
 
-import streamlit as st
-from model import listaProcessos, uso_cpu_percent, info_memoria, total_processos_threads
-from streamlit_autorefresh import st_autorefresh
 
-# Configurações da página
-st.set_page_config(
-    page_title="Dashboard de Processos",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
+def testes():
+    console = Console()
 
-# CSS retrô
-st.markdown("""
-    <style>
-    html, body, [class*="css"] {
-        background-color: black !important;
-        color: #00FF00 !important;
-        font-family: "Courier New", monospace;
-    }
-    .stProgress > div > div > div > div {
-        background-color: #00FF00;
-    }
-    .block-container {
-        padding-top: 1rem;
-    }
-    .stats-box {
-        border: 2px solid #00FF00;
-        padding: 10px;
-        border-radius: 5px;
-        margin-bottom: 15px;
-    }
-    </style>
-""", unsafe_allow_html=True)
+    # Dados
+    x = list(range(1, 13))
+    y = [3, 5, 2, 6, 4, 7, 5, 6, 4, 5, 8, 9]
 
-st.title("DASHBOARD DE PROCESSOS Pedro & Vitor")
+    # Gera o gráfico como string
+    plt.clf()
+    
+    plt.plot(x, y)
+    plt.title("Gráfico de Linha")
+    plt.frame(True)    # Ativa moldura no plotext
+    plt.xticks([2, 4, 6, 8, 10])  # ✅ Coloca ticks apenas nos pontos definidos
+    graph = plt.build()
 
-# ⏱Atualiza a cada 2 segundos
-st_autorefresh(interval=2000, key="atualiza")
+    # Alinha o gráfico ao centro dentro do painel
+    panel = Panel(Align.center(graph), title="📊 Dashboard Capivárico")
 
-# Obter informações globais do sistema
-uso_cpu, ocioso_cpu = uso_cpu_percent()
-mem_info = info_memoria()
-total_proc, total_thr = total_processos_threads()
+    console.print(panel)
 
-# Layout em colunas para estatísticas do sistema
-col1, col2, col3 = st.columns(3)
+def iniciaDash(processos, page_size=10):
+    console = Console()
 
-with col1:
-    st.markdown('<div class="stats-box">', unsafe_allow_html=True)
-    st.markdown("### 💻 CPU")
-    st.progress(uso_cpu/100)
-    st.write(f"Uso da CPU: **{uso_cpu:.2f}%**")
-    st.write(f"CPU Ociosa: **{ocioso_cpu:.2f}%**")
-    st.markdown('</div>', unsafe_allow_html=True)
+    total = len(processos)
+    page = 0
 
-with col2:
-    st.markdown('<div class="stats-box">', unsafe_allow_html=True)
-    st.markdown("### 🧠 Memória")
-    st.progress(mem_info['mem_usada_percent']/100)
-    st.write(f"Memória Usada: **{mem_info['mem_usada_percent']:.2f}%** ({mem_info['mem_usada']/1024:.1f} MB)")
-    st.write(f"Memória Livre: **{mem_info['mem_livre_percent']:.2f}%**")
-    st.write(f"Total RAM: **{mem_info['mem_total']/1024:.1f} MB**")
-    st.markdown('</div>', unsafe_allow_html=True)
+    while True:
+        table = Table(title="Lista de Processos", expand=True)  # cria a tabela em cada iteração
 
-with col3:
-    st.markdown('<div class="stats-box">', unsafe_allow_html=True)
-    st.markdown("### 📊 Processos")
-    st.write(f"Total de Processos: **{total_proc}**")
-    st.write(f"Total de Threads: **{total_thr}**")
-    st.write(f"SWAP Usado: **{mem_info['swap_usada']/1024:.1f} MB** / **{mem_info['swap_total']/1024:.1f} MB**")
-    st.markdown('</div>', unsafe_allow_html=True)
+        table.add_column("ID", style="cyan")
+        table.add_column("Nome", style="magenta")
+        table.add_column("PPID", style="yellow")
+        table.add_column("Status", style="green")
+        table.add_column("UID", style="blue")
+        table.add_column("CPU (ticks)", style="white")
+        table.add_column("Threads", style="purple")
+        table.add_column("Comando", style="bright_black")
+        table.add_column("Memória (kB)", style="red")
+    
 
-# Adicionar uma linha de separação
-st.markdown("---")
+        start = page * page_size
+        end = min(start + page_size, total)
 
-# Título da seção de processos
-st.markdown("### 📋 Lista de Processos")
+        for processo in processos[start:end]:
+            table.add_row(
+                str(processo.pid),
+                str(processo.name),
+                str(processo.ppid),
+                str(processo.estado),
+                str(processo.uid),
+                str(processo.cpuUserTick + processo.cpuSysTick),
+                str(processo.threads),
+                str(processo.commandCMD),
+                str(processo.memoriaKB),
+            )
 
-# Lista de processos
-processes = listaProcessos()
-processes.sort(key=lambda p: p.pid)
+        console.clear()
+        console.print(table)
+        console.print(f"Página {page + 1}/{(total - 1) // page_size + 1} (q para sair, Enter ou w para próxima)")
 
-# Tabela formatada
-table = [{
-    "PID": p.pid,
-    "Nome": p.name,
-    "Status": p.estado,
-    "PPID": p.ppid,
-    "UID": p.uid,
-    "Threads": p.threads,
-    "CPU (user)": p.cpuUserTick,
-    "CPU (kernel)": p.cpuSysTick,
-    "RAM (KB)": p.memoriaKB,
-    "Usuário": p.user,
-    "Comando": p.commandCMD
-} for p in processes]
-
-st.dataframe(table, use_container_width=True)
-
-# Adicionar contador de processos
-st.write(f"Total de processos exibidos: {len(processes)}")
-
-# Adicionar rodapé
-st.markdown("---")
-st.caption("Dashboard de Processos - Sistemas Operacionais UTFPR")
+        cmd = input()
+        if cmd.lower() == 'q':
+            break
+        if cmd.lower() == 'w' or cmd == '':
+            if (page + 1) * page_size >= total:
+                page = 0  # volta para a primeira página se passar do total
+            else:
+                page += 1
