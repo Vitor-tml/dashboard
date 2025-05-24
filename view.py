@@ -2,166 +2,36 @@
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 
+# Função para aplicar o estilo CSS
+# O CSS deve ser salvo em um arquivo chamado "retro_style.css" no mesmo diretório
+def set_style():
+    with open("retro_style.css", "r") as f:
+        css = f.read()
+    st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+
 def render_dashboard(data):
+    # Configurações da página
     st.set_page_config(
         page_title="Dashboard de Processos",
         layout="wide",
         initial_sidebar_state="collapsed"
     )
-
-    # --- CSS Retrô Aprimorado ---
-    st.markdown("""
-        <style>
-        /* Fundo e texto base */
-        html, body, [class*="css"] {
-            background-color: #000000 !important; /* Fundo preto puro */
-            color: #00FF00 !important; /* Verde vibrante */
-            font-family: "Courier New", monospace; /* Fonte monoespaçada clássica */
-            text-shadow: 0 0 5px #00FF00; /* Efeito de brilho */
-        }
-
-        /* Efeito de scanlines (linhas de varredura de monitor CRT) */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: 
-                repeating-linear-gradient(
-                    0deg, 
-                    rgba(0, 0, 0, 0.15), 
-                    rgba(0, 0, 0, 0.15) 1px, 
-                    transparent 1px, 
-                    transparent 2px
-                );
-            pointer-events: none; /* Garante que não interfere com cliques */
-            z-index: 9999; /* Garante que as linhas fiquem por cima */
-        }
-        
-        /* Barra de progresso (CPU, Memória) */
-        .stProgress > div > div > div > div {
-            background-color: #00FF00;
-            box-shadow: 0 0 8px #00FF00; /* Mais brilho na barra */
-        }
-        
-        /* Contêiner principal e remoção de margem padrão */
-        .block-container {
-            padding-top: 1rem;
-            padding-bottom: 1rem;
-            padding-left: 2rem;
-            padding-right: 2rem;
-        }
-
-        /* Caixas de estatísticas (CPU, Memória, Processos) */
-        .stats-box {
-            border: 2px solid #00FF00;
-            padding: 15px;
-            border-radius: 0px; /* Bordas retas */
-            margin-bottom: 20px;
-            box-shadow: 0 0 10px #00FF00; /* Efeito de brilho ao redor das caixas */
-            background-color: rgba(0, 50, 0, 0.1); /* Um leve fundo verde translúcido */
-        }
-
-        /* Títulos */
-        h1, h2, h3, h4, h5, h6 {
-            color: #00FF00 !important;
-            text-shadow: 0 0 8px #00FF00; /* Mais brilho nos títulos */
-            border-bottom: 1px dashed #00FF00; /* Linha tracejada abaixo dos títulos */
-            padding-bottom: 5px;
-            margin-bottom: 15px;
-        }
-
-        /* Texto simples */
-        p, .stMarkdown {
-            color: #00FF00;
-            text-shadow: 0 0 3px #00FF00;
-        }
-
-        /* Dataframe (Tabela de Processos) */
-        .stDataFrame {
-            border: 2px solid #00FF00;
-            box-shadow: 0 0 10px #00FF00;
-            background-color: rgba(0, 50, 0, 0.1); /* Fundo translúcido */
-        }
-
-        .stDataFrame table {
-            background-color: transparent !important;
-            color: #00FF00 !important;
-        }
-
-        .stDataFrame th {
-            background-color: #008000 !important; /* Cabeçalho verde mais escuro */
-            color: #FFFFFF !important; /* Texto branco no cabeçalho */
-            text-shadow: 0 0 5px #FFFFFF;
-            border-bottom: 2px solid #00FF00 !important;
-        }
-        
-        .stDataFrame td {
-            border-color: #00FF00 !important; /* Linhas da tabela */
-        }
-
-        /* Linhas separadoras */
-        hr {
-            border-top: 2px dashed #00FF00;
-            margin-top: 20px;
-            margin-bottom: 20px;
-        }
-
-        /* Rodapé */
-        .stCaption {
-            color: #008000 !important; /* Verde mais escuro para o rodapé */
-            text-shadow: none;
-        }
-        
-        /* Scrollbar styling (Pode não funcionar em todos os navegadores) */
-        ::-webkit-scrollbar {
-            width: 12px;
-            height: 12px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #001a00; /* Fundo do scrollbar */
-            border: 1px solid #00FF00;
-        }
-        ::-webkit-scrollbar-thumb {
-            background-color: #00FF00;
-            border: 2px solid #008000;
-            border-radius: 0px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background-color: #33FF33;
-        }
-
-        /* Remover decoração padrão do Streamlit em alguns elementos */
-        .stButton>button {
-            background-color: #008000;
-            color: #FFFFFF;
-            border: 2px solid #00FF00;
-            box-shadow: 0 0 8px #00FF00;
-            border-radius: 0px;
-        }
-        .css-fg4lnv { /* Classe específica para o menu do Streamlit, pode variar */
-            background-color: black !important;
-            color: #00FF00 !important;
-        }
-        .css-1fv8s86 { /* Container principal da app */
-            background-color: black !important;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
+    # APLICANDO O CSS
+    set_style()
     st.title("DASHBOARD DE PROCESSOS Pedro & Vitor")
-
     st_autorefresh(interval=2000, key="atualiza")
 
+    # Lógica da View
     # OBTENDO DADOS DO DICIONÁRIO 'data' RECEBIDO DO CONTROLLER
-    uso_cpu = data.get('cpu_usage', 0)
+    uso_cpu    = data.get('cpu_usage', 0)
     ocioso_cpu = data.get('cpu_idle', 0)
-    mem_info = data.get('mem_info', {})
+    mem_info   = data.get('mem_info', {})
     total_proc = data.get('total_processes', 0)
-    total_thr = data.get('total_threads', 0)
+    total_thr  = data.get('total_threads', 0)
+
+    # Recebe e ordena a lista de processos
     processes_list = data.get('processes_list', [])
+    processes_list.sort(key=lambda p: p.pid)
 
     col1, col2, col3 = st.columns(3)
 
@@ -201,21 +71,18 @@ def render_dashboard(data):
     st.markdown("---") # Linha de separação
 
     st.markdown("### 📋 Lista de Processos")
-
-    processes_list.sort(key=lambda p: p.pid)
-
     table = [{
-        "PID": p.pid,
-        "Nome": p.name,
-        "Status": p.estado,
-        "PPID": p.ppid,
-        "UID": p.uid,
-        "Threads": p.threads,
-        "CPU (user)": p.cpuUserTick,
+        "PID":      p.pid,
+        "Nome":     p.name,
+        "Status":   p.estado,
+        "PPID":     p.ppid,
+        "UID":      p.uid,
+        "Threads":  p.threads,
+        "CPU (user)":   p.cpuUserTick,
         "CPU (kernel)": p.cpuSysTick,
         "RAM (KB)": p.memoriaKB,
-        "Usuário": p.user_display,
-        "Comando": p.commandCMD
+        "Usuário":  p.user_display,
+        "Comando":  p.commandCMD
     } for p in processes_list]
 
     st.dataframe(table, use_container_width=True)
