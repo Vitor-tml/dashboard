@@ -215,10 +215,12 @@ def listaProcessos():
 # --- NOVA CLASSE PARA O MODELO GERAL DO SISTEMA (com Threading) ---
 class SystemMonitorConsoleModel:
     def __init__(self):
-        self._data = {} # Dicionário para armazenar os dados coletados
+        self._data = {}             # Dicionário para armazenar os dados coletados
         self._lock = threading.Lock() # Lock para garantir acesso seguro aos dados
-        self._last_cpu_total = 0 # Para cálculo do uso de CPU%
-        self._last_cpu_idle = 0  # Para cálculo do uso de CPU%
+        self._last_cpu_total = 0    # Para cálculo do uso de CPU%
+        self._last_cpu_idle = 0     # Para cálculo do uso de CPU%
+        self.cpu_history = []       # Histórico de uso de CPU
+        self.cpu_history_maxlen = 30# Número de pontos no gráfico
         
         # Inicializa os valores da CPU na primeira leitura para o cálculo do percentual
         _, _, self._last_cpu_total, self._last_cpu_idle = uso_cpu_percent_internal(0, 0)
@@ -237,6 +239,12 @@ class SystemMonitorConsoleModel:
         temp_data["cpu_idle"] = cpu_idle
         self._last_cpu_total = new_total # Atualiza os últimos valores para a próxima coleta
         self._last_cpu_idle = new_idle
+
+        # Atualiza o histórico
+        self.cpu_history.append(cpu_usage)
+        if len(self.cpu_history) > self.cpu_history_maxlen:
+            self.cpu_history.pop(0)
+        temp_data["cpu_history"] = list(self.cpu_history)  # Salva no dicionário de dados
 
         # Coleta de memória global
         temp_data["mem_info"] = info_memoria()
@@ -258,7 +266,9 @@ class SystemMonitorConsoleModel:
         """
         collection_thread = threading.Thread(target=self._collect_all_data)
         collection_thread.start()
-        collection_thread.join() # Espera a thread terminar a coleta
+        # Só conta como paralelismo se não esperar a thread terminar
+        # Se quiser esperar a thread terminar, descomente a linha abaixo:
+        # collection_thread.join() # Espera a thread terminar a coleta
 
         # Retorna uma cópia dos dados coletados para segurança
         with self._lock:

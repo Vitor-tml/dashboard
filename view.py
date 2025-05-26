@@ -1,6 +1,7 @@
 # view.py (com estilo retrô aprimorado)
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
+import pandas as pd
 
 # Função para aplicar o estilo CSS
 # O CSS deve ser salvo em um arquivo chamado "retro_style.css" no mesmo diretório
@@ -8,6 +9,7 @@ def set_style():
     with open("retro_style.css", "r") as f:
         css = f.read()
     st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+
 
 def render_dashboard(data):
     # Configurações da página
@@ -41,6 +43,11 @@ def render_dashboard(data):
         st.progress(uso_cpu/100)
         st.write(f"Uso da CPU: **{uso_cpu:.2f}%**")
         st.write(f"CPU Ociosa: **{ocioso_cpu:.2f}%**")
+        # Gráfico de uso de CPU com legenda
+        cpu_history = data.get('cpu_history', [uso_cpu])
+        cpu_df = pd.DataFrame(cpu_history, columns=["Uso da CPU (%)"])
+        st.markdown("#### Gráfico de Uso da CPU (%)")  # Legenda/título acima do gráfico
+        st.line_chart(cpu_df)
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col2:
