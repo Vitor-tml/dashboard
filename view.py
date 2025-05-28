@@ -1,10 +1,8 @@
-# view.py (com estilo retrô aprimorado)
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 import pandas as pd
 
 # Função para aplicar o estilo CSS
-# O CSS deve ser salvo em um arquivo chamado "retro_style.css" no mesmo diretório
 def set_style():
     with open("retro_style.css", "r") as f:
         css = f.read()
