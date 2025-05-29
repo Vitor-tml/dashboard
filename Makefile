@@ -17,3 +17,12 @@ cli:
 # Limpa o projeto
 clean:
 	rm -rf venv
+
+cputeste:
+	stress --cpu 12
+
+ramteste:
+	stress-ng --vm 2 --vm-bytes 90% --timeout 60s
+
+ramtotalteste:
+	stress-ng --vm 4 --vm-bytes 100% --timeout 5m

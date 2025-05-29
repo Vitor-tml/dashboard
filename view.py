@@ -90,7 +90,7 @@ def render_dashboard(data):
         st.write(f"Total de Threads: **{total_thr}**")
         st.write(f"SWAP Usado: **{swap_usada_mb:.1f} MB** / **{swap_total_mb:.1f} MB**")
         
-        # Opcional: Adicionar um pequeno gráfico de SWAP se necessário, similar ao de RAM
+        # Gráfico de uso de SWAP
         if swap_total_mb > 0:
             swap_usada_percent = (swap_usada_mb / swap_total_mb) * 100
             swap_livre_percent = 100 - swap_usada_percent
