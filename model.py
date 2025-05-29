@@ -379,7 +379,7 @@ if __name__ == '__main__':
             print("\033[2J\033[H", end="")
             
             controller.run_monitor()
-            print("\n--- Atualizando em 2 segundos... (Ctrl+C para sair) ---")x
+            print("\n--- Atualizando em 2 segundos... (Ctrl+C para sair) ---")
             time.sleep(2)
     except KeyboardInterrupt:
         print("\n\nMonitoramento interrompido pelo usuário.")

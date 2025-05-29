@@ -1,5 +1,5 @@
-from model import SystemMonitorConsoleModel # Importa a classe do Modelo que coleta tudo
-from view import render_dashboard          # Importa a função de renderização da View
+from model import SystemMonitorConsoleModel 
+from view import render_dashboard          
 
 # Instancia o modelo uma única vez no início
 # Isso garante que _last_cpu_total e _last_cpu_idle persistam entre as atualizações
