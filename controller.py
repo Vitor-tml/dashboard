@@ -1,11 +1,16 @@
+# controller.py
+
 from model import SystemMonitorConsoleModel 
-from view import render_dashboard          
+from view import render_dashboard
 
 # Instancia o modelo uma única vez no início
-# Isso garante que _last_cpu_total e _last_cpu_idle persistam entre as atualizações
 monitor_model = SystemMonitorConsoleModel()
 
 def executarDashboard():
+    """
+    Função principal que o Streamlit irá chamar.
+    Busca os dados principais do modelo e passa para a view.
+    """
     # 1. O Controller pede os dados completos ao Modelo
     dashboard_data = monitor_model.get_all_data()
 

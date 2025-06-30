@@ -251,6 +251,56 @@ def listaProcessos():
     
     return lista
 
+# --- INÍCIO: NOVAS FUNÇÕES (PARTE B) ---
+
+def info_particoes_montadas():
+    """
+    Lista os pontos de montagem das partições de disco.
+    Nota: Devido à restrição de não usar a bib 'os', não é possível
+    obter o tamanho e o uso do disco. Apenas listamos as montagens.
+    """
+    particoes = []
+    try:
+        mounts_path = Path("/proc/mounts")
+        for linha in mounts_path.read_text().splitlines():
+            partes = linha.split()
+            device = partes[0]
+            ponto_montagem = partes[1]
+            # Filtra para mostrar apenas dispositivos de bloco reais
+            if device.startswith("/dev/"):
+                particoes.append({
+                    "device": device,
+                    "ponto_montagem": ponto_montagem,
+                    "tipo": partes[2]
+                })
+    except (FileNotFoundError, Exception):
+        return []
+    return particoes
+
+def get_process_open_files(pid):
+    """
+    Lista os arquivos abertos por um processo específico usando pathlib.
+    """
+    arquivos_abertos = []
+    fd_path = Path(f'/proc/{pid}/fd')
+    try:
+        if fd_path.is_dir():
+            for fd_link in fd_path.iterdir():
+                try:
+                    # Path.readlink() para resolver o link simbólico
+                    destino = fd_link.readlink()
+                    arquivos_abertos.append(f"{fd_link.name} -> {destino}")
+                except (FileNotFoundError, OSError):
+                    arquivos_abertos.append(f"{fd_link.name} -> [acesso negado ou link quebrado]")
+                    continue
+    except (PermissionError, FileNotFoundError):
+         return ["Não foi possível acessar os arquivos (permissão negada ou processo encerrado)."]
+    except Exception as e:
+        return [f"Erro ao ler arquivos: {e}"]
+
+    return arquivos_abertos if arquivos_abertos else ["Nenhum arquivo aberto encontrado ou acessível."]
+
+
 # --- CLASSE PARA O MODELO GERAL DO SISTEMA ---
 class SystemMonitorConsoleModel:
     """
