@@ -4,6 +4,10 @@ import streamlit as st
 import pandas as pd
 from pathlib import Path
 from model import get_process_open_files
+import altair as alt
+
+_swap_history = []
+_swap_history_maxlen = 30
 
 def set_style():
     try:
@@ -32,44 +36,128 @@ def render_resource_monitor(data):
     st.header("Visão Geral do Sistema")
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.markdown('<div class="stats-box">', unsafe_allow_html=True)
+        # st.markdown('<div class="stats-box">', unsafe_allow_html=True)
         uso_cpu = data.get('cpu_usage', 0)
         st.markdown("### 💻 CPU")
-        st.progress(uso_cpu / 100)
+        # st.progress(uso_cpu / 100)
         st.write(f"Uso da CPU: **{uso_cpu:.2f}%**")
         cpu_history = data.get('cpu_history', [uso_cpu])
         cpu_df = pd.DataFrame(cpu_history, columns=["Uso da CPU (%)"])
-        st.line_chart(cpu_df, use_container_width=True)
+
+        # Antigo gráfico
+        # st.line_chart(cpu_df, use_container_width=True)
+
+        ###########################################################################
+
+        cpu_df = pd.DataFrame(cpu_history, columns=["Uso da CPU (%)"])
+        cpu_df["Tempo"] = list(range(len(cpu_df)))  # eixo X fictício
+
+        line_chart = alt.Chart(cpu_df).mark_line(
+            color="#00FF00",
+            strokeWidth=2
+        ).encode(
+            x=alt.X("Tempo", axis=None),
+            y=alt.Y("Uso da CPU (%)", scale=alt.Scale(domain=[0, 100])),
+            tooltip=["Tempo", "Uso da CPU (%)"]
+        ).properties(
+            width="container",
+            height=200,
+            background="#000000"
+        ).configure_axis(
+            grid=True,
+            gridColor="#004400",
+            gridOpacity=0.3
+        ).configure_view(
+            stroke=None
+        )
+
+        st.altair_chart(line_chart, use_container_width=True)
+
+        ###########################################################################
         st.markdown('</div>', unsafe_allow_html=True)
     with col2:
-        st.markdown('<div class="stats-box">', unsafe_allow_html=True)
+        # st.markdown('<div class="stats-box">', unsafe_allow_html=True)
         mem_info = data.get('mem_info', {})
         mem_usada_percent = mem_info.get('mem_usada_percent', 0)
         mem_usada_mb = mem_info.get('mem_usada', 0) / 1024
         mem_total_mb = mem_info.get('MemTotal', 0) / 1024
         st.markdown("### 🧠 Memória RAM")
-        st.progress(mem_usada_percent / 100)
+        # st.progress(mem_usada_percent / 100)
         st.write(f"Usada: **{mem_usada_percent:.2f}%** ({mem_usada_mb:.1f} MB de {mem_total_mb:.1f} MB)")
         global _memory_history
         _memory_history.append({"Usada": mem_usada_percent})
         if len(_memory_history) > _memory_history_maxlen: _memory_history.pop(0)
         mem_hist_df = pd.DataFrame(_memory_history)
-        st.line_chart(mem_hist_df, use_container_width=True)
+        # st.line_chart(mem_hist_df, use_container_width=True)
+        # Gráfico retrô de memória RAM
+        mem_df = mem_hist_df
+        mem_df["Tempo"] = range(len(mem_df))
+        mem_chart = alt.Chart(mem_df).mark_line(
+            color="#00FFFF",  # Azul neon
+            strokeWidth=2
+        ).encode(
+            x=alt.X("Tempo", axis=alt.Axis(title="", labelColor="#00FF00", tickColor="#004400", gridColor="#004400")),
+            y=alt.Y("Usada", axis=alt.Axis(title="Memória (%)", labelColor="#00FF00", tickColor="#004400", gridColor="#004400"))
+        ).properties(
+            height=200,
+            width=500,
+            background="#000000"
+        ).configure_view(
+            stroke=None
+        ).configure_axis(
+            grid=True,
+            gridColor="#004400",
+            domain=False
+        )
+
+        st.altair_chart(mem_chart, use_container_width=True)
+
         st.markdown('</div>', unsafe_allow_html=True)
     with col3:
-        st.markdown('<div class="stats-box">', unsafe_allow_html=True)
         st.markdown("### 📊 Processos e SWAP")
-        st.write(f"Total de Processos: **{data.get('total_processes', 0)}**")
-        st.write(f"Total de Threads: **{data.get('total_threads', 0)}**")
-        swap_usada_mb = mem_info.get('swap_usada', 0) / 1024
+
         swap_total_mb = mem_info.get('SwapTotal', 0) / 1024
+        swap_usada_mb = mem_info.get('swap_usada', 0) / 1024
+        swap_usada_percent = (swap_usada_mb / swap_total_mb * 100) if swap_total_mb > 0 else 0
+
         st.write(f"SWAP Usado: **{swap_usada_mb:.1f} MB** / **{swap_total_mb:.1f} MB**")
-        if swap_total_mb > 0:
-            st.progress((swap_usada_mb / swap_total_mb))
-        st.markdown('</div>', unsafe_allow_html=True)
+
+        # Atualiza histórico de uso de SWAP
+        global _swap_history
+        if 'swap_usada_percent' not in locals():
+            swap_usada_percent = 0
+        _swap_history.append({"SWAP": swap_usada_percent})
+        if len(_swap_history) > _swap_history_maxlen:
+            _swap_history.pop(0)
+        swap_df = pd.DataFrame(_swap_history)
+        swap_df["index"] = range(len(swap_df))
+
+        # Gráfico com Altair no estilo retrô
+        swap_chart = alt.Chart(swap_df).mark_line(
+            color="#FF00FF",  # Magenta neon
+            strokeWidth=2
+        ).encode(
+            x=alt.X("index", axis=alt.Axis(title="", labelColor="#00FF00", tickColor="#004400", gridColor="#004400")),
+            y=alt.Y("SWAP", axis=alt.Axis(title="SWAP (%)", labelColor="#00FF00", tickColor="#004400", gridColor="#004400"))
+        ).properties(
+            height=200,
+            width=500,
+            background="#000000"
+        ).configure_view(
+            stroke=None
+        ).configure_axis(
+            grid=True,
+            gridColor="#004400",
+            domain=False
+        )
+
+        st.altair_chart(swap_chart, use_container_width=True)
+        
 
     st.markdown("---")
     st.header("📋 Lista de Processos")
+    st.write(f"Total de Processos: **{data.get('total_processes', 0)}**")
+    st.write(f"Total de Threads: **{data.get('total_threads', 0)}**")
 
     processes_list = data.get('processes_list', [])
     processes_list.sort(key=lambda p: p.pid)
