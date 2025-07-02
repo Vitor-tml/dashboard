@@ -214,16 +214,17 @@ def render_filesystem_browser(data):
     st.markdown("---")
     st.subheader("Navegador de Diretórios")
 
-    # Inicializa o caminho atual no session_state como o diretório do script
+    # Inicializa o caminho atual no session_state como o diretório raiz
     if 'current_path_fs_pathlib' not in st.session_state:
-        st.session_state.current_path_fs_pathlib = Path(__file__).parent.resolve()
+        # Define o caminho inicial como a raiz do sistema de arquivos
+        st.session_state.current_path_fs_pathlib = Path('/')
 
     current_path = st.session_state.current_path_fs_pathlib
 
     st.markdown(f"**📍 Caminho Atual:** `{current_path}`")
 
-    # Botão para subir de nível
-    if current_path != current_path.parent:
+    # Botão para subir de nível (apenas se não estiver na raiz)
+    if current_path != Path('/'):
         if st.button("⬆️ Subir um nível"):
             st.session_state.current_path_fs_pathlib = current_path.parent
             st.rerun()
