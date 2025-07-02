@@ -5,6 +5,7 @@ import pandas as pd
 from pathlib import Path
 from model import get_process_open_files
 import altair as alt
+from datetime import datetime
 
 _swap_history = []
 _swap_history_maxlen = 30
@@ -21,7 +22,7 @@ _memory_history = []
 _memory_history_maxlen = 30
 
 def render_dashboard(data):
-    st.set_page_config(page_title="Dashboard de Processos", layout="wide", initial_sidebar_state="collapsed")
+    # st.set_page_config(page_title="Dashboard de Processos", layout="wide", initial_sidebar_state="collapsed")
     set_style()
     st.title("DASHBOARD DE PROCESSOS E SISTEMAS - Pedro & Vitor")
 
@@ -201,45 +202,91 @@ Uso de RAM   : {selected_process.memoriaKB} KB
                     st.code('\n'.join(open_files))
 
 def render_filesystem_browser(data):
-    st.header("Sistema de Arquivos")
+    st.header("🗄️ Sistema de Arquivos")
     st.subheader("Discos e Pontos de Montagem")
+    
     partitions = data.get("partitions", [])
     if not partitions:
         st.warning("Não foi possível carregar as informações das partições.")
     else:
         st.dataframe(partitions, use_container_width=True)
+    
     st.markdown("---")
     st.subheader("Navegador de Diretórios")
 
-    if 'current_path' not in st.session_state:
-        st.session_state.current_path = "/"
-    path_str = st.text_input("Caminho Atual", st.session_state.current_path)
-    current_path = Path(path_str)
+    # Inicializa o caminho atual no session_state como o diretório do script
+    if 'current_path_fs_pathlib' not in st.session_state:
+        st.session_state.current_path_fs_pathlib = Path(__file__).parent.resolve()
 
+    current_path = st.session_state.current_path_fs_pathlib
+
+    st.markdown(f"**📍 Caminho Atual:** `{current_path}`")
+
+    # Botão para subir de nível
+    if current_path != current_path.parent:
+        if st.button("⬆️ Subir um nível"):
+            st.session_state.current_path_fs_pathlib = current_path.parent
+            st.rerun()
+
+    # Tenta listar o conteúdo do diretório atual
     if current_path.is_dir():
-        st.session_state.current_path = str(current_path.resolve())
-        if current_path.parent != current_path:
-            if st.button("⬆️ Subir para o diretório pai"):
-                st.rerun()
         try:
-            items_list = []
-            for item in sorted(current_path.iterdir(), key=lambda f: f.name.lower()):
-                if item.is_dir():
-                    if st.button(f"📁 {item.name}", key=f"dir_{item.name}"):
-                        st.session_state.current_path = str(item.resolve())
-                        st.rerun()
-                elif item.is_file():
-                    try:
-                        size_kb = item.stat().st_size / 1024
-                        items_list.append(f"📄 {item.name:<50} {size_kb:8.2f} KB")
-                    except FileNotFoundError:
-                        items_list.append(f"📄 {item.name} (arquivo movido)")
-            if items_list:
-                st.markdown("##### Arquivos no diretório:")
-                st.code("\n".join(items_list))
+            dirs_info = []
+            files_info = []
+            
+            for item in sorted(list(current_path.iterdir()), key=lambda x: x.name.lower()):
+                try:
+                    if not item.exists():
+                        continue
+
+                    if item.is_dir():
+                        dirs_info.append({"Nome": item.name + "/", "Path": item.resolve()}) # Armazenar o caminho completo
+                    elif item.is_file():
+                        stat = item.stat()
+                        size_kb = stat.st_size / 1024
+                        mod_time = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+                        
+                        files_info.append({
+                            "Nome": item.name,
+                            "Tipo": "📄 Arquivo",
+                            "Tamanho (KB)": f"{size_kb:.1f}",
+                            "Modificação": mod_time
+                        })
+                except PermissionError:
+                    if item.is_dir():
+                        dirs_info.append({"Nome": item.name + "/ (Sem Permissão)", "Path": None})
+                    else:
+                        files_info.append({"Nome": item.name + " (Sem Permissão)", "Tipo": "📄 Arquivo", "Tamanho (KB)": "", "Modificação": ""})
+                except Exception as e:
+                    st.warning(f"Erro ao processar '{item.name}': {e}")
+                    continue
+
+            # Exibe os diretórios como botões clicáveis
+            if dirs_info:
+                st.subheader("Pastas")
+                for dir_item in dirs_info:
+                    dir_name = dir_item["Nome"]
+                    dir_path = dir_item["Path"]
+                    if dir_path: # Apenas cria o botão se o caminho for acessível
+                        if st.button(f"📁 {dir_name}", key=f"dir_{dir_path}"):
+                            st.session_state.current_path_fs_pathlib = dir_path
+                            st.rerun()
+                    else:
+                        st.markdown(f"📁 {dir_name}") # Apenas exibe o nome se não for acessível
+            else:
+                st.info("Nenhuma subpasta encontrada neste caminho.")
+
+            # Exibe os arquivos em uma tabela (sem alteração)
+            if files_info:
+                st.subheader("Arquivos")
+                files_df = pd.DataFrame(files_info)
+                st.dataframe(files_df, use_container_width=True)
+            else:
+                st.info("Nenhum arquivo encontrado neste caminho.")
+
         except PermissionError:
-            st.error(f"Permissão negada para acessar o diretório: {current_path}")
+            st.error(f"Permissão negada para acessar o diretório: {current_path}. Tente um caminho diferente.")
         except Exception as e:
-            st.error(f"Erro ao listar diretório: {e}")
+            st.error(f"Erro inesperado ao listar o diretório: {e}")
     else:
-        st.error("O caminho inserido não é um diretório válido.")
+        st.error("O caminho atual não é um diretório válido ou acessível.")

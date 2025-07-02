@@ -8,4 +8,4 @@ if __name__ == "__main__":
     while True:
         executarDashboard()
         time.sleep(2)
-        st.rerun()
+        # st.rerun() # Esta linha deve ser removida 
