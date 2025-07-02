@@ -350,6 +350,8 @@ class SystemMonitorConsoleModel:
         # Coleta da lista de processos detalhada
         temp_data["processes_list"] = listaProcessos()
 
+        temp_data["partitions"] = info_particoes_montadas()
+        
         # Atualiza os dados de forma thread-safe
         with self._lock:
             self._data = temp_data
