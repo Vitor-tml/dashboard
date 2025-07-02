@@ -4,7 +4,7 @@ from model import SystemMonitorConsoleModel
 from view import render_dashboard
 import streamlit as st
 
-st.set_page_config(page_title="Dashboard de Processos", layout="wide", initial_sidebar_state="collapsed")
+# st.set_page_config(page_title="Dashboard de Processos", layout="wide", initial_sidebar_state="collapsed")
 
 # Instancia o modelo uma única vez no início
 monitor_model = SystemMonitorConsoleModel()

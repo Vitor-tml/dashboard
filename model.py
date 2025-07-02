@@ -1,7 +1,8 @@
 from pathlib import Path
 import time
 import threading
-
+import json
+import subprocess
 
 # --- CLASSE Processo ---
 class Processo:
@@ -252,29 +253,92 @@ def listaProcessos():
     return lista
 
 # --- INÍCIO: NOVAS FUNÇÕES (PARTE B) ---
-
 def info_particoes_montadas():
     """
-    Lista os pontos de montagem das partições de disco.
-    Nota: Devido à restrição de não usar a bib 'os', não é possível
-    obter o tamanho e o uso do disco. Apenas listamos as montagens.
+    Lista os pontos de montagem das partições de disco e coleta informações de uso
+    chamando o programa C 'get_disk_usage'.
     """
     particoes = []
+    
+    # Caminho para o executável C. Assumimos que ele está na mesma pasta do script Python.
+    # Se estiver em outro lugar, ajuste este caminho.
+    c_executable_path = Path(__file__).parent / "get_disk_usage" 
+
     try:
+        # Lê /proc/mounts para obter os pontos de montagem
         mounts_path = Path("/proc/mounts")
         for linha in mounts_path.read_text().splitlines():
             partes = linha.split()
+            if len(partes) < 3: # Garante que a linha tenha informações suficientes
+                continue
+
             device = partes[0]
             ponto_montagem = partes[1]
-            # Filtra para mostrar apenas dispositivos de bloco reais
-            if device.startswith("/dev/"):
+            tipo_fs = partes[2]
+
+            # Filtra para mostrar apenas dispositivos de bloco reais e tipos de sistema de arquivos relevantes
+            if device.startswith("/dev/") and tipo_fs not in ("sysfs", "proc", "devtmpfs", "tmpfs", "cgroup", "squashfs", "debugfs", "fusectl", "pstore", "none", "mqueue", "hugetlbfs"):
+                
+                total_gb = "N/A"
+                usado_gb = "N/A"
+                livre_gb = "N/A"
+                percent_uso = "N/A"
+
+                try:
+                    # Chama o programa C para obter as estatísticas de uso
+                    # capture_output=True para capturar stdout e stderr
+                    # text=True para decodificar a saída como texto
+                    result = subprocess.run([str(c_executable_path), ponto_montagem], capture_output=True, text=True, check=True)
+                    
+                    # Parsear a saída JSON do programa C
+                    disk_stats = json.loads(result.stdout)
+
+                    if "error" in disk_stats:
+                        total_gb = disk_stats["error"]
+                        usado_gb = disk_stats["error"]
+                        livre_gb = disk_stats["error"]
+                        percent_uso = disk_stats["error"]
+                    else:
+                        total_gb = disk_stats["total_bytes"] / (1024**3)
+                        usado_gb = disk_stats["used_bytes"] / (1024**3)
+                        livre_gb = disk_stats["free_bytes"] / (1024**3)
+                        percent_uso = disk_stats["percent_used"]
+
+                except subprocess.CalledProcessError as e:
+                    # O programa C retornou um erro (código de saída diferente de 0)
+                    total_gb = f"Erro ao executar C: {e.stderr.strip()}"
+                    usado_gb = total_gb
+                    livre_gb = total_gb
+                    percent_uso = total_gb
+                except json.JSONDecodeError:
+                    total_gb = "Erro JSON C"
+                    usado_gb = total_gb
+                    livre_gb = total_gb
+                    percent_uso = total_gb
+                except FileNotFoundError:
+                    total_gb = "Executável C não encontrado!"
+                    usado_gb = total_gb
+                    livre_gb = total_gb
+                    percent_uso = total_gb
+                except Exception as e:
+                    total_gb = f"Erro inesperado: {e}"
+                    usado_gb = total_gb
+                    livre_gb = total_gb
+                    percent_uso = total_gb
+
                 particoes.append({
-                    "device": device,
-                    "ponto_montagem": ponto_montagem,
-                    "tipo": partes[2]
+                    "Dispositivo": device,
+                    "Ponto de Montagem": ponto_montagem,
+                    "Tipo FS": tipo_fs,
+                    "Total (GB)": f"{total_gb:.2f}" if isinstance(total_gb, float) else total_gb,
+                    "Usado (GB)": f"{usado_gb:.2f}" if isinstance(usado_gb, float) else usado_gb,
+                    "Livre (GB)": f"{livre_gb:.2f}" if isinstance(livre_gb, float) else livre_gb,
+                    "Uso (%)": f"{percent_uso:.2f}%" if isinstance(percent_uso, float) else percent_uso
                 })
-    except (FileNotFoundError, Exception):
-        return []
+    except (FileNotFoundError, Exception) as e:
+        # Erro ao ler /proc/mounts
+        particoes.append({"Erro": f"Não foi possível ler /proc/mounts: {e}"})
+        return [] # Retorna vazio ou com erro se a fonte primária falhar
     return particoes
 
 def get_process_open_files(pid):
@@ -351,7 +415,7 @@ class SystemMonitorConsoleModel:
         temp_data["processes_list"] = listaProcessos()
 
         temp_data["partitions"] = info_particoes_montadas()
-        
+
         # Atualiza os dados de forma thread-safe
         with self._lock:
             self._data = temp_data
@@ -419,20 +483,20 @@ class ConsoleController:
         mostrarInfoGlobal(collected_data)
         mostrarListaProcessos(collected_data.get('processes_list', []))
 
-# --- EXECUÇÃO PRINCIPAL ---
-if __name__ == '__main__':
-    """
-    Execução principal do script.
-    """
-    controller = ConsoleController()
-    try:
-        while True:
-            # Limpa a tela do console usando escape sequences ANSI
-            print("\033[2J\033[H", end="")
+# # --- EXECUÇÃO PRINCIPAL ---
+# if __name__ == '__main__':
+#     """
+#     Execução principal do script.
+#     """
+#     controller = ConsoleController()
+#     try:
+#         while True:
+#             # Limpa a tela do console usando escape sequences ANSI
+#             print("\033[2J\033[H", end="")
             
-            controller.run_monitor()
-            print("\n--- Atualizando em 2 segundos... (Ctrl+C para sair) ---")
-            time.sleep(2)
-    except KeyboardInterrupt:
-        print("\n\nMonitoramento interrompido pelo usuário.")
-        print("Encerrando...")
+#             controller.run_monitor()
+#             print("\n--- Atualizando em 2 segundos... (Ctrl+C para sair) ---")
+#             time.sleep(2)
+#     except KeyboardInterrupt:
+#         print("\n\nMonitoramento interrompido pelo usuário.")
+#         print("Encerrando...")
