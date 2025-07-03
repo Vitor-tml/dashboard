@@ -364,6 +364,58 @@ def get_process_open_files(pid):
 
     return arquivos_abertos if arquivos_abertos else ["Nenhum arquivo aberto encontrado ou acessível."]
 
+def get_process_resources(pid):
+    """
+    Coleta e classifica os recursos abertos por um processo.
+    Categoriza descritores: arquivos, sockets, pipes, anon, etc.
+    Inclui locks ativos.
+    """
+    fd_path = Path(f'/proc/{pid}/fd')
+    recursos = {
+        "Arquivos": [],
+        "Sockets": [],
+        "Pipes": [],
+        "Anon": [],
+        "Erros": [],
+        "Locks": []
+    }
+
+    # Categorizar descritores abertos
+    try:
+        if fd_path.is_dir():
+            for fd in fd_path.iterdir():
+                try:
+                    destino = str(fd.readlink())
+                    if destino.startswith("socket:"):
+                        recursos["Sockets"].append(f"{fd.name} → {destino}")
+                    elif destino.startswith("pipe:"):
+                        recursos["Pipes"].append(f"{fd.name} → {destino}")
+                    elif destino.startswith("[") or "anon_inode" in destino:
+                        recursos["Anon"].append(f"{fd.name} → {destino}")
+                    elif Path(destino).exists():
+                        recursos["Arquivos"].append(f"{fd.name} → {destino}")
+                    else:
+                        recursos["Erros"].append(f"{fd.name} → {destino}")
+                except Exception as e:
+                    recursos["Erros"].append(f"{fd.name} → ERRO: {e}")
+    except PermissionError:
+        recursos["Erros"].append("Permissão negada para acessar descritores.")
+    except Exception as e:
+        recursos["Erros"].append(f"Erro ao ler fd/: {e}")
+
+    # Tentar ler locks
+    try:
+        locks_path = Path(f'/proc/{pid}/locks')
+        if locks_path.exists():
+            with open(locks_path, 'r') as f:
+                recursos["Locks"] = [linha.strip() for linha in f if linha.strip()]
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        recursos["Locks"].append(f"Erro ao ler locks: {e}")
+
+    return recursos
+
 
 # --- CLASSE PARA O MODELO GERAL DO SISTEMA ---
 class SystemMonitorConsoleModel:

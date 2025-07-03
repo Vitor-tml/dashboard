@@ -4,6 +4,7 @@ import streamlit as st
 import pandas as pd
 from pathlib import Path
 from model import get_process_open_files
+from model import get_process_resources
 import altair as alt
 from datetime import datetime
 
@@ -195,11 +196,21 @@ PPID         : {selected_process.ppid}
 Threads      : {selected_process.threads}
 Uso de RAM   : {selected_process.memoriaKB} KB
             """)
-            if st.button("Ver Arquivos e Sockets Abertos", key=f"btn_details_{selected_pid}"):
-                with st.spinner("Buscando recursos..."):
-                    open_files = get_process_open_files(selected_pid)
-                    st.markdown("##### Descritores de Arquivos Abertos:")
-                    st.code('\n'.join(open_files))
+            if st.button("Ver Recursos Abertos e Locks", key=f"btn_details_{selected_pid}"):
+                st.session_state["processo_expandido"] = selected_pid
+
+            # Se o PID ainda estiver salvo, renderiza
+            if st.session_state.get("processo_expandido") == selected_pid:
+                with st.spinner("Coletando recursos..."):
+                    recursos = get_process_resources(selected_pid)
+
+                    if not any(recursos.values()):
+                        st.warning("Este processo não possui recursos acessíveis ou você não tem permissão para inspecioná-los.")
+                    else:
+                        for categoria, lista in recursos.items():
+                            if lista:
+                                with st.expander(f"🔹 {categoria} ({len(lista)})", expanded=False):
+                                    st.code("\n".join(lista))
 
 def render_filesystem_browser(data):
     st.header("🗄️ Sistema de Arquivos")

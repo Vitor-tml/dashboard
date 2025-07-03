@@ -26,3 +26,6 @@ ramteste:
 
 ramtotalteste:
 	stress-ng --vm 4 --vm-bytes 100% --timeout 5m
+
+c:
+	gcc get_disk_usage.c -o get_disk_usage
